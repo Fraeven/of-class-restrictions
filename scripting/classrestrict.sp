@@ -120,8 +120,6 @@ public void Event_PlayerClass(Event event, const char[] name, bool dontBroadcast
         return;
     }
 
-    PrintToServer("In Event_PlayerClass");
-
     int iClient = GetClientOfUserId(event.GetInt("userid"));
     int iClass = event.GetInt("class");
     int iTeam = GetClientTeam(iClient);
@@ -141,8 +139,6 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
         return;
     }
 
-    PrintToServer("In Event_PlayerSpawn");
-
     int iClient = GetClientOfUserId(event.GetInt("userid"));
     int iTeam = GetClientTeam(iClient);
 
@@ -160,8 +156,6 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
     {
         return;
     }
-
-    PrintToServer("In Event_PlayerTeam");
 
     int iClient = GetClientOfUserId(event.GetInt("userid"));
     int iTeam = event.GetInt("team");
@@ -181,8 +175,6 @@ bool IsFull(int iTeam, int iClass)
     {
         return false;
     }
-
-    PrintToServer("In IsFull");
 
     // Get team's class limit
     int iLimit;
@@ -230,8 +222,6 @@ bool IsImmune(int iClient)
         return false;
     }
 
-    PrintToServer("In IsImmune");
-
     char sFlags[32];
     g_hFlags.GetString(sFlags, sizeof(sFlags));
 
@@ -241,8 +231,6 @@ bool IsImmune(int iClient)
 
 void PickClass(int iClient)
 {
-    PrintToServer("In PickClass");
-
     // Loop through all classes, starting at random class
     for (int i = GetRandomInt(TF_CLASS_SCOUT, TF_CLASS_CIVILIAN), iClass = i, iTeam = GetClientTeam(iClient);;)
     {
