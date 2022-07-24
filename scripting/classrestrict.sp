@@ -5,7 +5,7 @@
 #pragma newdecls required
 #pragma semicolon 1
 
-#define PL_VERSION "1.0.1"
+#define PL_VERSION "1.0.2"
 
 #define TF_CLASS_DEMOMAN 4
 #define TF_CLASS_ENGINEER 9
@@ -52,6 +52,20 @@ char g_sSounds[12][24] = {
     "vo/mercenary_no02.wav",
     "vo/civilian_painsevere06.wav"
 };
+char g_sClassNames[12][24] = {
+    "",
+    "Scout",
+    "Sniper",
+    "Soldier",
+    "Demoman",
+    "Medic",
+    "Heavy",
+    "Pyro",
+    "Spy",
+    "Engineer",
+    "Mercenary",
+    "Civilian"
+};
 
 public void OnPluginStart()
 {
@@ -85,8 +99,10 @@ public void OnPluginStart()
     g_hLimits[TF_TEAM_RED][TF_CLASS_MERCENARY] = CreateConVar("sm_classrestrict_red_mercenaries", "-1", "Limit for Red mercenaries in OF.");
     g_hLimits[TF_TEAM_RED][TF_CLASS_CIVILIAN] = CreateConVar("sm_classrestrict_red_civilians", "-1", "Limit for Red civilians in OF.");
 
-    HookEvent("player_changeclass", Event_PlayerClass);
+    // HookEvent("player_changeclass", Event_PlayerClass, EventHookMode_Pre);
     HookEvent("player_team", Event_PlayerTeam);
+    // AddCommandListener(Command_JoinTeam, "jointeam");
+    AddCommandListener(Command_JoinClass, "joinclass");
 
     for (int client = 1; client <= MaxClients; client++)
     {
@@ -133,39 +149,160 @@ public void OnClientPutInServer(int client)
     g_iClass[client] = TF_CLASS_UNKNOWN;
 }
 
-public void Event_PlayerClass(Event event, const char[] name, bool dontBroadcast)
+public int GetLimit(int team, int class)
 {
-    if (!IsEnabled())
+    // If plugin is disabled, or team or class is invalid, class is not full
+    if (team < TF_TEAM_RED || class < TF_CLASS_SCOUT)
     {
-        return;
+        return -1;
     }
 
-    int iClient = GetClientOfUserId(event.GetInt("userid"));
-    int iClass = event.GetInt("class");
-    int iTeam = GetClientTeam(iClient);
+    // Get team's class limit
+    int iLimit;
+    float flLimit = g_hLimits[team][class].FloatValue;
 
-    if (IsFull(iTeam, iClass))
+    // If limit is a percentage, calculate real limit
+    if (flLimit > 0.0 && flLimit < 1.0)
     {
-        ShowVGUIPanel(iClient, "class");
-        EmitSoundToClient(iClient, g_sSounds[iClass]);
-        TF2_SetPlayerClass(iClient, view_as<TFClassType>(g_iClass[iClient]));
+        iLimit = RoundToNearest(flLimit * GetTeamClientCount(team));
     }
+    else
+    {
+        iLimit = RoundToNearest(flLimit);
+    }
+
+    return iLimit;
 }
 
-public void OF_OnPlayerSpawned(int iClient)
+public int GetCurrent(int team, int class)
+{
+    int current = 0;
+    // Loop through all clients
+    for (int i = 1; i <= MaxClients; i++)
+    {
+        // If client is in game, on this team, has this class and limit has been reached, class is full
+        if (IsValidClient(i) && GetClientTeam(i) == team && view_as<int>(TF2_GetPlayerClass(i)) == class)
+        {
+            current++;
+        }
+    }
+
+    return current;
+}
+
+public Action Command_JoinClass(int client, const char[] command, int argc)
+{
+    if (!IsEnabled())
+    {
+        return Plugin_Continue;
+    }
+
+    char class_string[64];
+    GetCmdArg(1, class_string, 64);
+
+    int class = TF_CLASS_UNKNOWN;
+    if (StrEqual(class_string, "scout"))
+    {
+        class = TF_CLASS_SCOUT;
+    }
+    else if (StrEqual(class_string, "sniper"))
+    {
+        class = TF_CLASS_SNIPER;
+    }
+    else if (StrEqual(class_string, "soldier"))
+    {
+        class = TF_CLASS_SOLDIER;
+    }
+    else if (StrEqual(class_string, "demoman"))
+    {
+        class = TF_CLASS_DEMOMAN;
+    }
+    else if (StrEqual(class_string, "medic"))
+    {
+        class = TF_CLASS_MEDIC;
+    }
+    else if (StrEqual(class_string, "heavyweapons"))
+    {
+        class = TF_CLASS_HEAVY;
+    }
+    else if (StrEqual(class_string, "pyro"))
+    {
+        class = TF_CLASS_PYRO;
+    }
+    else if (StrEqual(class_string, "spy"))
+    {
+        class = TF_CLASS_SPY;
+    }
+    else if (StrEqual(class_string, "engineer"))
+    {
+        class = TF_CLASS_ENGINEER;
+    }
+    else if (StrEqual(class_string, "mercenary"))
+    {
+        class = TF_CLASS_MERCENARY;
+    }
+    else if (StrEqual(class_string, "civilian"))
+    {
+        class = TF_CLASS_CIVILIAN;
+    }
+    else
+    {
+        return Plugin_Continue;
+    }
+
+    if (class == view_as<int>(TF2_GetPlayerClass(client)))
+    {
+        return Plugin_Continue;
+    }
+
+    int team = GetClientTeam(client);
+    int limit = GetLimit(team, class);
+    int current = GetCurrent(team, class);
+
+    if (IsFull(current, limit))
+    {
+        ShowVGUIPanel(client, "class");
+        EmitSoundToClient(client, g_sSounds[class]);
+        TF2_SetPlayerClass(client, view_as<TFClassType>(g_iClass[client]));
+        PrintRestrictedMessage(client, current, limit, class);
+        return Plugin_Handled;
+    }
+
+    return Plugin_Continue;
+}
+
+public void PrintRestrictedMessage(int client, int current, int limit, int class)
+{
+    if (limit == 0)
+    {
+        PrintCenterText(client, "Cannot switch to %s, this class is restricted.", g_sClassNames[class]);
+    }
+    else
+    {
+        PrintCenterText(client, "Cannot switch to %s, class limit %i/%i reached.", g_sClassNames[class], current, limit);
+    }
+
+}
+
+public void OF_OnPlayerSpawned(int client)
 {
     if (!IsEnabled())
     {
         return;
     }
 
-    int iTeam = GetClientTeam(iClient);
+    int team = GetClientTeam(client);
+    int class = view_as<int>(TF2_GetPlayerClass(client));
+    g_iClass[client] = class;
+    int limit = GetLimit(team, class);
+    int current = GetCurrent(team, class) - 1; // subtract after spawning to not count yourself
 
-    if (IsFull(iTeam, (g_iClass[iClient] = view_as<int>(TF2_GetPlayerClass(iClient)))))
+    if (IsFull(current, limit))
     {
-        ShowVGUIPanel(iClient, "class");
-        EmitSoundToClient(iClient, g_sSounds[g_iClass[iClient]]);
-        PickClass(iClient);
+        ShowVGUIPanel(client, "class");
+        EmitSoundToClient(client, g_sSounds[g_iClass[client]]);
+        PickClass(client);
+        PrintRestrictedMessage(client, current, limit, class);
     }
 }
 
@@ -176,59 +313,36 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
         return;
     }
 
-    int iClient = GetClientOfUserId(event.GetInt("userid"));
-    int iTeam = event.GetInt("team");
+    int client = GetClientOfUserId(event.GetInt("userid"));
+    int team = event.GetInt("team");
+    int class = g_iClass[client];
+    int limit = GetLimit(team, class);
+    int current = GetCurrent(team, class);
 
-    if (IsFull(iTeam, g_iClass[iClient]))
+    if (IsFull(current, limit))
     {
-        ShowVGUIPanel(iClient, "class");
-        EmitSoundToClient(iClient, g_sSounds[g_iClass[iClient]]);
-        PickClass(iClient);
+        ShowVGUIPanel(client, "class");
+        EmitSoundToClient(client, g_sSounds[g_iClass[client]]);
+        PickClass(client);
+        PrintRestrictedMessage(client, current, limit, class);
     }
 }
 
-bool IsFull(int iTeam, int iClass)
+bool IsFull(int current, int limit)
 {
-    // If plugin is disabled, or team or class is invalid, class is not full
-    if (iTeam < TF_TEAM_RED || iClass < TF_CLASS_SCOUT)
+    if (limit == -1)
     {
         return false;
     }
 
-    // Get team's class limit
-    int iLimit;
-    float flLimit = g_hLimits[iTeam][iClass].FloatValue;
-
-    // If limit is a percentage, calculate real limit
-    if (flLimit > 0.0 && flLimit < 1.0)
-    {
-        iLimit = RoundToNearest(flLimit * GetTeamClientCount(iTeam));
-    }
-    else
-    {
-        iLimit = RoundToNearest(flLimit);
-    }
-
-    // If limit is -1, class is not full
-    if (iLimit == -1)
-    {
-        return false;
-    }
-
-    // If limit is 0, class is full
-    if (iLimit == 0)
+    if (limit == 0)
     {
         return true;
     }
 
-    // Loop through all clients
-    for (int i = 1, iCount = 0; i <= MaxClients; i++)
+    if (current >= limit)
     {
-        // If client is in game, on this team, has this class and limit has been reached, class is full
-        if (IsValidClient(i) && GetClientTeam(i) == iTeam && view_as<int>(TF2_GetPlayerClass(i)) == iClass && ++iCount > iLimit)
-        {
-            return true;
-        }
+        return true;
     }
 
     return false;
@@ -239,8 +353,10 @@ void PickClass(int iClient)
     // Loop through all classes, starting at random class
     for (int i = GetRandomInt(TF_CLASS_SCOUT, TF_CLASS_CIVILIAN), iClass = i, iTeam = GetClientTeam(iClient);;)
     {
+        int limit = GetLimit(iTeam, i);
+        int current = GetCurrent(iTeam, i);
         // If team's class is not full, set client's class
-        if (!IsFull(iTeam, i))
+        if (!IsFull(current, limit))
         {
             TF2_SetPlayerClass(iClient, view_as<TFClassType>(i));
             TF2_RespawnPlayer(iClient);
