@@ -9,12 +9,6 @@ Only supports TDM for now, FFA support to come later/by request.
 Enable/disable restricting classes in OF.  
 `sm_classrestrict_enabled` (0/1, default 1)
 
-Admin flags for restricted classes in OF.  
-`sm_classrestrict_flags` (default "")
-
-Enable/disable admins being immune for restricted classes in OF.  
-`sm_classrestrict_immunity` (0/1, default 0)
-
 Limits for Blu classes in OF. (-1 for no limit, anything higher will be the limit for that class. Default -1)
 `sm_classrestrict_blu_demomen`  
 `sm_classrestrict_blu_engineers`  

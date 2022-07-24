@@ -5,7 +5,7 @@
 #pragma newdecls required
 #pragma semicolon 1
 
-#define PL_VERSION "1.0.0"
+#define PL_VERSION "1.0.1"
 
 #define TF_CLASS_DEMOMAN 4
 #define TF_CLASS_ENGINEER 9
@@ -22,6 +22,7 @@
 
 #define TF_TEAM_BLU 3
 #define TF_TEAM_RED 2
+#define TF_TEAM_SPEC 1
 
 public Plugin myinfo =
 {
@@ -36,8 +37,6 @@ int g_iClass[MAXPLAYERS + 1];
 ConVar g_hEnabled;
 ConVar g_hTeamplay;
 ConVar g_hForceClass;
-ConVar g_hFlags;
-ConVar g_hImmunity;
 ConVar g_hLimits[4][12];
 char g_sSounds[12][24] = {
     "",
@@ -51,7 +50,7 @@ char g_sSounds[12][24] = {
     "vo/spy_no02.mp3",
     "vo/engineer_no03.mp3",
     "vo/mercenary_no02.wav",
-    "vo/mercenary_no02.wav" // Civilian does not have a no voiceline, just use the merc's
+    "vo/civilian_painsevere06.wav"
 };
 
 public void OnPluginStart()
@@ -61,8 +60,6 @@ public void OnPluginStart()
 
     CreateConVar("sm_classrestrict_version", PL_VERSION, "Restrict classes in OF.", FCVAR_NOTIFY);
     g_hEnabled = CreateConVar("sm_classrestrict_enabled", "1",  "Enable/disable restricting classes in OF.");
-    g_hFlags = CreateConVar("sm_classrestrict_flags", "", "Admin flags for restricted classes in OF.");
-    g_hImmunity = CreateConVar("sm_classrestrict_immunity", "0", "Enable/disable admins being immune for restricted classes in OF.");
 
     g_hLimits[TF_TEAM_BLU][TF_CLASS_DEMOMAN] = CreateConVar("sm_classrestrict_blu_demomen", "-1", "Limit for Blu demomen in OF.");
     g_hLimits[TF_TEAM_BLU][TF_CLASS_ENGINEER] = CreateConVar("sm_classrestrict_blu_engineers", "-1", "Limit for Blu engineers in OF.");
@@ -89,13 +86,36 @@ public void OnPluginStart()
     g_hLimits[TF_TEAM_RED][TF_CLASS_CIVILIAN] = CreateConVar("sm_classrestrict_red_civilians", "-1", "Limit for Red civilians in OF.");
 
     HookEvent("player_changeclass", Event_PlayerClass);
-    HookEvent("player_spawn", Event_PlayerSpawn);
     HookEvent("player_team", Event_PlayerTeam);
+
+    for (int client = 1; client <= MaxClients; client++)
+    {
+        // If client is in game, on this team, has this class and limit has been reached, class is full
+        if (IsValidClient(client))
+        {
+            g_iClass[client] = view_as<int>(TF2_GetPlayerClass(client));
+        }
+    }
 }
 
 public bool IsEnabled()
 {
     return g_hEnabled.BoolValue && g_hTeamplay.BoolValue && !g_hForceClass.BoolValue;
+}
+
+bool IsValidClient(int client)
+{
+    if (!client || client > MaxClients || client < 1)
+    {
+        return false;
+    }
+
+    if (!IsClientInGame(client))
+    {
+        return false;
+    }
+
+    return true;
 }
 
 public void OnMapStart()
@@ -124,27 +144,26 @@ public void Event_PlayerClass(Event event, const char[] name, bool dontBroadcast
     int iClass = event.GetInt("class");
     int iTeam = GetClientTeam(iClient);
 
-    if (!(g_hImmunity.BoolValue && IsImmune(iClient)) && IsFull(iTeam, iClass))
+    if (IsFull(iTeam, iClass))
     {
-        ShowVGUIPanel(iClient, iTeam == TF_TEAM_BLU ? "class_blue" : "class_red");
+        ShowVGUIPanel(iClient, "class");
         EmitSoundToClient(iClient, g_sSounds[iClass]);
         TF2_SetPlayerClass(iClient, view_as<TFClassType>(g_iClass[iClient]));
     }
 }
 
-public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
+public void OF_OnPlayerSpawned(int iClient)
 {
     if (!IsEnabled())
     {
         return;
     }
 
-    int iClient = GetClientOfUserId(event.GetInt("userid"));
     int iTeam = GetClientTeam(iClient);
 
-    if (!(g_hImmunity.BoolValue && IsImmune(iClient)) && IsFull(iTeam, (g_iClass[iClient] = view_as<int>(TF2_GetPlayerClass(iClient)))))
+    if (IsFull(iTeam, (g_iClass[iClient] = view_as<int>(TF2_GetPlayerClass(iClient)))))
     {
-        ShowVGUIPanel(iClient, iTeam == TF_TEAM_BLU ? "class_blue" : "class_red");
+        ShowVGUIPanel(iClient, "class");
         EmitSoundToClient(iClient, g_sSounds[g_iClass[iClient]]);
         PickClass(iClient);
     }
@@ -160,9 +179,9 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
     int iClient = GetClientOfUserId(event.GetInt("userid"));
     int iTeam = event.GetInt("team");
 
-    if (!(g_hImmunity.BoolValue && IsImmune(iClient)) && IsFull(iTeam, g_iClass[iClient]))
+    if (IsFull(iTeam, g_iClass[iClient]))
     {
-        ShowVGUIPanel(iClient, iTeam == TF_TEAM_BLU ? "class_blue" : "class_red");
+        ShowVGUIPanel(iClient, "class");
         EmitSoundToClient(iClient, g_sSounds[g_iClass[iClient]]);
         PickClass(iClient);
     }
@@ -206,27 +225,13 @@ bool IsFull(int iTeam, int iClass)
     for (int i = 1, iCount = 0; i <= MaxClients; i++)
     {
         // If client is in game, on this team, has this class and limit has been reached, class is full
-        if (IsClientInGame(i) && GetClientTeam(i) == iTeam && view_as<int>(TF2_GetPlayerClass(i)) == iClass && ++iCount > iLimit)
+        if (IsValidClient(i) && GetClientTeam(i) == iTeam && view_as<int>(TF2_GetPlayerClass(i)) == iClass && ++iCount > iLimit)
         {
             return true;
         }
     }
 
     return false;
-}
-
-bool IsImmune(int iClient)
-{
-    if (!iClient || !IsClientInGame(iClient))
-    {
-        return false;
-    }
-
-    char sFlags[32];
-    g_hFlags.GetString(sFlags, sizeof(sFlags));
-
-    // If flags are specified and client has generic or root flag, client is immune
-    return !StrEqual(sFlags, "") && CheckCommandAccess(iClient, "classrestrict", ReadFlagString(sFlags));
 }
 
 void PickClass(int iClient)
