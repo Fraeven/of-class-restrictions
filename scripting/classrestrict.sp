@@ -5,7 +5,7 @@
 #pragma newdecls required
 #pragma semicolon 1
 
-#define PL_VERSION "1.0.2"
+#define PL_VERSION "1.1.0"
 
 #define TF_CLASS_DEMOMAN 4
 #define TF_CLASS_ENGINEER 9
@@ -20,9 +20,10 @@
 #define TF_CLASS_CIVILIAN 11
 #define TF_CLASS_UNKNOWN 0
 
-#define TF_TEAM_BLU 3
-#define TF_TEAM_RED 2
+#define TF_TEAM_UNASSIGNED 0
 #define TF_TEAM_SPEC 1
+#define TF_TEAM_RED 2
+#define TF_TEAM_BLU 3
 
 public Plugin myinfo =
 {
@@ -75,6 +76,20 @@ public void OnPluginStart()
     CreateConVar("sm_classrestrict_version", PL_VERSION, "Restrict classes in OF.", FCVAR_NOTIFY);
     g_hEnabled = CreateConVar("sm_classrestrict_enabled", "1",  "Enable/disable restricting classes in OF.");
 
+    // Any team limits
+    g_hLimits[TF_TEAM_UNASSIGNED][TF_CLASS_DEMOMAN] = CreateConVar("sm_classrestrict_demomen", "-1", "Limit for demomen in OF.");
+    g_hLimits[TF_TEAM_UNASSIGNED][TF_CLASS_ENGINEER] = CreateConVar("sm_classrestrict_engineers", "-1", "Limit for engineers in OF.");
+    g_hLimits[TF_TEAM_UNASSIGNED][TF_CLASS_HEAVY] = CreateConVar("sm_classrestrict_heavies", "-1", "Limit for heavies in OF.");
+    g_hLimits[TF_TEAM_UNASSIGNED][TF_CLASS_MEDIC] = CreateConVar("sm_classrestrict_medics", "-1", "Limit for medics in OF.");
+    g_hLimits[TF_TEAM_UNASSIGNED][TF_CLASS_PYRO] = CreateConVar("sm_classrestrict_pyros", "-1", "Limit for pyros in OF.");
+    g_hLimits[TF_TEAM_UNASSIGNED][TF_CLASS_SCOUT] = CreateConVar("sm_classrestrict_scouts", "-1", "Limit for scouts in OF.");
+    g_hLimits[TF_TEAM_UNASSIGNED][TF_CLASS_SNIPER] = CreateConVar("sm_classrestrict_snipers", "-1", "Limit for snipers in OF.");
+    g_hLimits[TF_TEAM_UNASSIGNED][TF_CLASS_SOLDIER] = CreateConVar("sm_classrestrict_soldiers", "-1", "Limit for soldiers in OF.");
+    g_hLimits[TF_TEAM_UNASSIGNED][TF_CLASS_SPY] = CreateConVar("sm_classrestrict_spies", "-1", "Limit for spies in OF.");
+    g_hLimits[TF_TEAM_UNASSIGNED][TF_CLASS_MERCENARY] = CreateConVar("sm_classrestrict_mercenaries", "-1", "Limit for mercenaries in OF.");
+    g_hLimits[TF_TEAM_UNASSIGNED][TF_CLASS_CIVILIAN] = CreateConVar("sm_classrestrict_civilians", "-1", "Limit for civilians in OF.");
+
+    // Team-specific overrides
     g_hLimits[TF_TEAM_BLU][TF_CLASS_DEMOMAN] = CreateConVar("sm_classrestrict_blu_demomen", "-1", "Limit for Blu demomen in OF.");
     g_hLimits[TF_TEAM_BLU][TF_CLASS_ENGINEER] = CreateConVar("sm_classrestrict_blu_engineers", "-1", "Limit for Blu engineers in OF.");
     g_hLimits[TF_TEAM_BLU][TF_CLASS_HEAVY] = CreateConVar("sm_classrestrict_blu_heavies", "-1", "Limit for Blu heavies in OF.");
@@ -99,9 +114,7 @@ public void OnPluginStart()
     g_hLimits[TF_TEAM_RED][TF_CLASS_MERCENARY] = CreateConVar("sm_classrestrict_red_mercenaries", "-1", "Limit for Red mercenaries in OF.");
     g_hLimits[TF_TEAM_RED][TF_CLASS_CIVILIAN] = CreateConVar("sm_classrestrict_red_civilians", "-1", "Limit for Red civilians in OF.");
 
-    // HookEvent("player_changeclass", Event_PlayerClass, EventHookMode_Pre);
     HookEvent("player_team", Event_PlayerTeam);
-    // AddCommandListener(Command_JoinTeam, "jointeam");
     AddCommandListener(Command_JoinClass, "joinclass");
 
     for (int client = 1; client <= MaxClients; client++)
@@ -116,7 +129,12 @@ public void OnPluginStart()
 
 public bool IsEnabled()
 {
-    return g_hEnabled.BoolValue && g_hTeamplay.BoolValue && !g_hForceClass.BoolValue;
+    return g_hEnabled.BoolValue && !g_hForceClass.BoolValue;
+}
+
+public bool IsTeamplay()
+{
+    return g_hTeamplay.BoolValue;
 }
 
 bool IsValidClient(int client)
@@ -159,7 +177,14 @@ public int GetLimit(int team, int class)
 
     // Get team's class limit
     int iLimit;
-    float flLimit = g_hLimits[team][class].FloatValue;
+    float flLimit = g_hLimits[TF_TEAM_UNASSIGNED][class].FloatValue;
+
+    // Use team-specific limit if it is set
+    if (team == TF_TEAM_RED || team == TF_TEAM_BLU)
+    {
+        float flTeamLimit = g_hLimits[team][class].FloatValue;
+        flLimit = flTeamLimit == -1.0 ? flLimit : flTeamLimit;
+    }
 
     // If limit is a percentage, calculate real limit
     if (flLimit > 0.0 && flLimit < 1.0)
@@ -250,7 +275,7 @@ public Action Command_JoinClass(int client, const char[] command, int argc)
         return Plugin_Continue;
     }
 
-    if (class == view_as<int>(TF2_GetPlayerClass(client)))
+    if (IsPlayerAlive(client) && class == view_as<int>(TF2_GetPlayerClass(client)))
     {
         return Plugin_Continue;
     }

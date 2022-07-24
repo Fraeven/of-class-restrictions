@@ -494,28 +494,6 @@ enum TFResourceType
 	TFResource_COUNT
 };
 
-static const char TFResourceNames[TFResource_COUNT][] =
-{
-	"m_iPing",
-	"m_iScore",
-	"m_iDeaths",
-	"m_iTotalScore",
-	"m_iCaptures",
-	"m_iDefenses",
-	"m_iDominations",
-	"m_iRevenge",
-	"m_iBuildingsDestroyed",
-	"m_iHeadshots",
-	"m_iBackstabs",
-	"m_iHealPoints",
-	"m_iInvulns",
-	"m_iTeleports",
-	"m_iResupplyPoints",
-	"m_iKillAssists",
-	"m_iMaxHealth",
-	"m_iPlayerClass"
-};
-
 /**
  * Gets a client's current team.
  *

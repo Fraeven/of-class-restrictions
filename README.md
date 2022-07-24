@@ -2,12 +2,25 @@
 
 Open Fortress port of TF2 Class Restrictions plugin by Tsunami: https://forums.alliedmods.net/showthread.php?p=642353
 
-Only supports TDM for now, FFA support to come later/by request.
-
 ## Configuration
 
 Enable/disable restricting classes in OF.  
 `sm_classrestrict_enabled` (0/1, default 1)
+
+For all cvars below, the default is -1 (no limit). Anything higher will be the limit for that class.
+
+Limits for *any* team's classes in OF. Use this for FFA or if both teams should have the same limits. Team-specific limits will *override* this value if they are set.
+`sm_classrestrict_demomen`  
+`sm_classrestrict_engineers`  
+`sm_classrestrict_heavies`  
+`sm_classrestrict_medics`  
+`sm_classrestrict_pyros`  
+`sm_classrestrict_scouts`  
+`sm_classrestrict_snipers`  
+`sm_classrestrict_soldiers`  
+`sm_classrestrict_spies`  
+`sm_classrestrict_mercenaries`  
+`sm_classrestrict_civilians`  
 
 Limits for Blu classes in OF. (-1 for no limit, anything higher will be the limit for that class. Default -1)
 `sm_classrestrict_blu_demomen`  
