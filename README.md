@@ -9,7 +9,7 @@ Enable/disable restricting classes in OF.
 
 For all cvars below, the default is -1 (no limit). Anything higher will be the limit for that class.
 
-Limits for *any* team's classes in OF. Use this for FFA or if both teams should have the same limits. Team-specific limits will *override* this value if they are set.
+Limits for *any* team's classes in OF. Use this for FFA or if both teams should have the same limits. Team-specific limits will *override* this value if they are set.  
 `sm_classrestrict_demomen`  
 `sm_classrestrict_engineers`  
 `sm_classrestrict_heavies`  
