@@ -23,7 +23,7 @@ Limits for *any* team's classes in OF. Use this for FFA or if both teams should 
 `sm_classrestrict_civilians`  
 `sm_classrestrict_juggernauts`  
 
-Limits for Blu classes in OF. (-1 for no limit, anything higher will be the limit for that class. Default -1)
+Limits for Blu classes in OF.  
 `sm_classrestrict_blu_demomen`  
 `sm_classrestrict_blu_engineers`  
 `sm_classrestrict_blu_heavies`  
@@ -49,6 +49,6 @@ Limits for Red classes in OF.
 `sm_classrestrict_red_spies`  
 `sm_classrestrict_red_mercenaries`  
 `sm_classrestrict_red_civilians`  
-`sm_classrestrict_blu_juggernauts`  
+`sm_classrestrict_red_juggernauts`  
 
 You can put any of these cvars in server.cfg or sourcemod.cfg, and then if you want map specific cvars you can make a file called mapname.cfg (for example cp_dustbowl.cfg) and put those cvars in there.
