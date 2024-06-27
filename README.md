@@ -1,3 +1,19 @@
+# ARCHIVED
+This plugin has been archived as the features it adds are now made redundant by the built-in classlimit cvars of Open Fortress:
+
+`of_classlimit_mercenary`  
+`of_classlimit_demoman`  
+`of_classlimit_engineer`  
+`of_classlimit_heavy`  
+`of_classlimit_medic`  
+`of_classlimit_pyro`  
+`of_classlimit_scout`  
+`of_classlimit_sniper`  
+`of_classlimit_soldier`  
+`of_classlimit_spy`  
+`of_classlimit_civilian`  
+`of_classlimit_juggernaut`  
+
 # Open Fortress Class Restrictions
 
 Open Fortress port of TF2 Class Restrictions plugin by Tsunami: https://forums.alliedmods.net/showthread.php?p=642353
